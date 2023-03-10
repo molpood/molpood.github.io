@@ -1,80 +1,98 @@
 <!DOCTYPE html>
-<html lang="de">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview Cordula Bitter</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-
-        h1 {
-            background-color: #3b3e6d;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #audio-player {
-            margin: 20px auto;
-            display: block;
-            width: 80%;
-        }
-
-        #transcript {
-            margin: 20px auto;
-            width: 80%;
-            text-align: center;
-        }
-
-        .current-line {
-            background-color: #f8e7a2;
-        }
-    </style>
+	<meta charset="UTF-8">
+	<title>Interview</title>
+	<link rel="stylesheet" href="https://cdn.plyr.io/3.6.4/plyr.css" />
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+		}
+		.container {
+			max-width: 800px;
+			margin: 0 auto;
+			padding: 20px;
+		}
+		h1 {
+			text-align: center;
+			margin-top: 50px;
+			margin-bottom: 20px;
+		}
+		audio {
+			display: block;
+			margin: 0 auto;
+			margin-bottom: 20px;
+		}
+		.transcript {
+			font-size: 18px;
+			line-height: 1.5;
+			margin-bottom: 50px;
+			white-space: pre-line;
+			overflow-x: hidden;
+			overflow-y: scroll;
+			height: 400px;
+			padding-right: 20px;
+		}
+		.transcript p {
+			margin: 0;
+			padding: 0;
+		}
+		.current-line {
+			background-color: #f7e9b8;
+		}
+		@media (max-width: 768px) {
+			.transcript {
+				font-size: 16px;
+				height: auto;
+			}
+		}
+	</style>
 </head>
 <body>
-    <h1>Interview Cordula Bitter</h1>
-
-    <audio id="audio-player" controls>
-        <source src="audio/Interview_002.m4a" type="audio/mp4">
-    </audio>
-
-    <div id="transcript"></div>
-
-    <script>
-        const transcriptUrl = "transcript/Interview_002.m4a_large.tsv";
-        const transcriptEl = document.getElementById("transcript");
-
-        fetch(transcriptUrl)
-            .then(response => response.text())
-            .then(data => {
-                const lines = data.split("\n").slice(1); // remove header
-                const transcript = lines.map(line => line.split("\t")[2]).join(" ");
-                transcriptEl.innerHTML = transcript;
-
-                const timeRanges = lines.map(line => {
-                    const [start, end] = line.split("\t").slice(0, 2);
-                    return {start: parseFloat(start), end: parseFloat(end)};
-                });
-
-                const audioEl = document.getElementById("audio-player");
-                audioEl.addEventListener("timeupdate", () => {
-                    const currentTime = audioEl.currentTime;
-                    const currentLineIndex = timeRanges.findIndex(({start, end}) => currentTime >= start && currentTime <= end);
-                    if (currentLineIndex !== -1) {
-                        const currentLineEl = transcriptEl.children[currentLineIndex];
-                        transcriptEl.scrollTop = currentLineEl.offsetTop - (transcriptEl.offsetHeight / 2);
-                        currentLineEl.classList.add("current-line");
-                        for (let i = 0; i < currentLineIndex; i++) {
-                            transcriptEl.children[i].classList.remove("current-line");
-                        }
-                        for (let i = currentLineIndex + 1; i < transcriptEl.children.length; i++) {
-                            transcriptEl.children[i].classList.remove("current-line");
-                        }
-                    }
-                });
-            });
+	<div class="container">
+		<h1>Interview Cordula Bitter</h1>
+		<audio controls crossorigin>
+			<source src="audio/Interview_002.m4a" type="audio/mp4">
+			Your browser does not support the audio element.
+		</audio>
+		<div class="transcript">
+			<?php
+				$transcript_file = fopen("transcript/Interview_002.m4a_large.tsv", "r") or die("Unable to open transcript file!");
+				$headers = fgetcsv($transcript_file, 0, "\t");
+				while (($line = fgetcsv($transcript_file, 0, "\t")) !== false) {
+					echo "<p";
+					if (isset($_GET['time']) && $line[0] <= $_GET['time'] && $line[1] > $_GET['time']) {
+						echo " class=\"current-line\"";
+					}
+					echo ">" . $line[2] . "</p>";
+				}
+				fclose($transcript_file);
+			?>
+		</div>
+	</div>
+	<script src="https://cdn.plyr.io/3.6.4/plyr.js"></script>
+	<script>
+		const player = new Plyr('audio');
+		player.on('timeupdate', event => {
+			const time = event.detail.plyr.currentTime;
+			window.history.replaceState({}, '', `?time=${time}`);
+			const currentLine = document.querySelector('.current-line');
+			if (currentLine) {
+				currentLine.classList.remove('current-line');
+			}
+			const allLines = document.querySelectorAll('.transcript p');
+			for (const line of allLines) {
+				const start = parseFloat(line.dataset.start);
+				const end = parseFloat(line.dataset.end);
+				if (start <= time && end > time) {
+					line.classList.add('current-line');
+					line.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+					break;
+				}
+			}
+		});
     </script>
 </body>
 </html>
