@@ -5,39 +5,51 @@
 	<title>Audio Player</title>
 	<style>
 		/* CSS für den Audio Player */
-		.audio-player {
-			margin: 10px;
-			display: flex;
-			align-items: center;
-			flex-wrap: wrap;
-		}
+        .audio-player {
+            margin: 10px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid #DDDDDD;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 2px 2px 5px #CCCCCC;
+        }
 
-		.audio-player audio {
-			margin-right: 10px;
-			flex-grow: 1;
-			width: 100%;
-			max-width: 400px;
-		}
+        .audio-player audio {
+            margin-right: 10px;
+            flex-grow: 1;
+            width: 100%;
+            max-width: 400px;
+        }
 
-		.audio-player p {
-			margin: 0;
-			padding: 0;
-			line-height: 1.5;
-			font-size: 18px;
-		}
+        .audio-player p {
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            margin-bottom: 10px;
+        }
 
-		.audio-player p.current {
-			background-color: #FFFFCC;
-		}
+        .audio-player p.current {
+            background-color: #FFFFCC;
+            border-radius: 5px;
+            padding: 5px;
+        }
 
-		@media (max-width: 768px) {
-			/* CSS für den Audio Player auf Smartphones */
-			.audio-player audio {
-				margin-right: 0;
-				margin-bottom: 10px;
-				max-width: none;
-			}
-		}
+        @media (max-width: 768px) {
+            /* CSS für den Audio Player auf Smartphones */
+            .audio-player audio {
+                margin-right: 0;
+                margin-bottom: 10px;
+                max-width: none;
+            }
+        }
+
+        body {
+            background-color: #F2F2F2;
+        }
 	</style>
 </head>
 <body>
