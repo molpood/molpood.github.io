@@ -1,103 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-	<meta charset="utf-8">
-	<title>Audio Player</title>
-	<style>
-		/* CSS für den Audio Player */
-		.audio-player {
-			margin: 10px;
-			display: flex;
-			align-items: center;
-			flex-wrap: wrap;
-		}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Cordula Bitter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
 
-		.audio-player audio {
-			margin-right: 10px;
-			flex-grow: 1;
-			width: 100%;
-			max-width: 400px;
-		}
+        h1 {
+            background-color: #3b3e6d;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
 
-		.audio-player p {
-			margin: 0;
-			padding: 0;
-			line-height: 1.5;
-			font-size: 18px;
-		}
+        #audio-player {
+            margin: 20px auto;
+            display: block;
+            width: 80%;
+        }
 
-		.audio-player p.current {
-			background-color: #FFFFCC;
-		}
+        #transcript {
+            margin: 20px auto;
+            width: 80%;
+            text-align: center;
+        }
 
-		@media (max-width: 768px) {
-			/* CSS für den Audio Player auf Smartphones */
-			.audio-player audio {
-				margin-right: 0;
-				margin-bottom: 10px;
-				max-width: none;
-			}
-		}
-	</style>
+        .current-line {
+            background-color: #f8e7a2;
+        }
+    </style>
 </head>
 <body>
-	<div class="audio-player">
-		<audio controls id="audio-player">
-			<source src="audio/Interview_002.m4a" type="audio/mp4">
-		</audio>
-		<div id="transcript">
-			<!-- JavaScript fügt den Text des Transkripts hier ein -->
-		</div>
-	</div>
+    <h1>Interview Cordula Bitter</h1>
 
-	<script>
-		// JavaScript um das Transkript anzuzeigen und die entsprechende Stelle hervorzuheben
-		const transcriptDiv = document.getElementById('transcript');
-		const audioPlayer = document.getElementById('audio-player');
+    <audio id="audio-player" controls>
+        <source src="audio/Interview_002.m4a" type="audio/mp4">
+    </audio>
 
-		fetch('transcript/Interview_002.m4a_large.tsv')
-			.then(response => response.text())
-			.then(data => {
-				const lines = data.split('\n').slice(1); // erste Zeile (header) ignorieren
-				let currentIndex = 0;
+    <div id="transcript"></div>
 
-				lines.forEach((line, index) => {
-					const [start, end, text] = line.split('\t');
-					const p = document.createElement('p');
-					p.textContent = text;
-					transcriptDiv.appendChild(p);
+    <script>
+        const transcriptUrl = "transcript/Interview_002.m4a_large.tsv";
+        const transcriptEl = document.getElementById("transcript");
 
-					audioPlayer.addEventListener('timeupdate', () => {
-						const currentTime = audioPlayer.currentTime;
-						if (currentTime >= start && currentTime < end) {
-							p.classList.add('current');
-							currentIndex = index;
-						} else {
-							p.classList.remove('current');
-						}
-					});
+        fetch(transcriptUrl)
+            .then(response => response.text())
+            .then(data => {
+                const lines = data.split("\n").slice(1); // remove header
+                const transcript = lines.map(line => line.split("\t")[2]).join(" ");
+                transcriptEl.innerHTML = transcript;
 
-					p.addEventListener('click', () => {
-						audioPlayer.currentTime = start;
-						audioPlayer.play();
-						currentIndex = index;
-					});
-				});
+                const timeRanges = lines.map(line => {
+                    const [start, end] = line.split("\t").slice(0, 2);
+                    return {start: parseFloat(start), end: parseFloat(end)};
+                });
 
-				// Scrollen Sie zur aktuellen Stelle im Text, wenn der Benutzer das Scrollen nicht manuell geändert hat
-				let userScrolling = false;
-				transcriptDiv.addEventListener('scroll', () => {
-					userScrolling = true;
-				});
-
-				setInterval(() => {
-					if (!userScrolling) {
-						const currentP = transcriptDiv.children[currentIndex];
-						const offset = currentP.offsetTop - transcriptDiv.offsetTop - 20; // 20px padding
-						transcriptDiv.scrollTop = offset;
-					}
-				}, 100);
-			});
-	</script>
+                const audioEl = document.getElementById("audio-player");
+                audioEl.addEventListener("timeupdate", () => {
+                    const currentTime = audioEl.currentTime;
+                    const currentLineIndex = timeRanges.findIndex(({start, end}) => currentTime >= start && currentTime <= end);
+                    if (currentLineIndex !== -1) {
+                        const currentLineEl = transcriptEl.children[currentLineIndex];
+                        transcriptEl.scrollTop = currentLineEl.offsetTop - (transcriptEl.offsetHeight / 2);
+                        currentLineEl.classList.add("current-line");
+                        for (let i = 0; i < currentLineIndex; i++) {
+                            transcriptEl.children[i].classList.remove("current-line");
+                        }
+                        for (let i = currentLineIndex + 1; i < transcriptEl.children.length; i++) {
+                            transcriptEl.children[i].classList.remove("current-line");
+                        }
+                    }
+                });
+            });
+    </script>
 </body>
 </html>
