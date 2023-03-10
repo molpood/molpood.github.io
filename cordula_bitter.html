@@ -2,26 +2,14 @@
 <html>
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Interview</title>
-	<script src="https://unpkg.com/wavesurfer.js"></script>
+	<!-- CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
 	<style>
-		body {
-			margin: 0;
-			padding: 0;
-		}
-		.container {
-			max-width: 800px;
-			margin: 0 auto;
-			padding: 20px;
-		}
-		h1 {
-			text-align: center;
-			margin-top: 0;
-		}
 		.transcript {
-			font-size: 18px;
-			line-height: 1.5;
-			margin-top: 50px;
+			font-size: 1.2rem;
+			margin-top: 2rem;
 		}
 		.highlight {
 			background-color: yellow;
@@ -30,57 +18,74 @@
 	</style>
 </head>
 <body>
-	<div class="container">
-		<h1>Interview</h1>
-		<div id="waveform"></div>
-		<div class="transcript">
-			<p></p>
+	<div class="container mt-5">
+		<!-- Audio Player -->
+		<div class="row">
+			<div class="col-md-8 offset-md-2">
+				<div id="player"></div>
+			</div>
+		</div>
+		<!-- Transcript -->
+		<div class="row">
+			<div class="col-md-8 offset-md-2 transcript">
+				<p id="transcript"></p>
+			</div>
 		</div>
 	</div>
 
+	<!-- JavaScript -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.0/howler.min.js"></script>
 	<script>
-		const wavesurfer = WaveSurfer.create({
-			container: '#waveform',
+		// Audio Player
+		var sound = new Howl({
+			src: ['audio/Interview_002.m4a'],
+			html5: true
+		});
+		var player = WaveSurfer.create({
+			container: '#player',
 			waveColor: 'gray',
 			progressColor: 'black',
 			cursorColor: 'black',
-			barWidth: 3,
-			responsive: true,
-			height: 100,
-			normalize: true,
-			minimap: true,
-			backend: 'MediaElement',
-			mediaControls: true
+			barWidth: 2,
+			barHeight: 4,
+			barGap: 1
+		});
+		player.load('audio/Interview_002.m4a');
+		player.on('ready', function () {
+			player.play();
+		});
+		player.on('play', function () {
+			sound.play();
+		});
+		player.on('pause', function () {
+			sound.pause();
+		});
+		sound.on('end', function () {
+			player.pause();
+			player.seekTo(0);
 		});
 
-		const transcript = document.querySelector('.transcript p');
-
+		// Transcript
+		var transcriptEl = document.getElementById('transcript');
 		fetch('transcript/Interview_002.m4a_large.tsv')
 			.then(response => response.text())
 			.then(data => {
-				const lines = data.split('\n').slice(1);
-				const cues = lines.map(line => {
-					const [start, end, text] = line.split('\t');
-					return {
-						start: parseFloat(start),
-						end: parseFloat(end),
-						text: text.trim()
-					};
-				});
-				wavesurfer.on('ready', function() {
-					const duration = wavesurfer.getDuration();
-					let i = 0;
-					wavesurfer.on('seek', function(progress) {
-						while (i < cues.length - 1 && progress > cues[i + 1].start) {
-							i++;
+				var rows = data.trim().split('\n').slice(1); // remove header
+				var words = rows.map(row => row.split('\t')[2]); // get text column
+				var times = rows.map(row => parseFloat(row.split('\t')[0])); // get start times
+				var currentIndex = 0;
+				player.on('audioprocess', function () {
+					if (player.getCurrentTime() > times[currentIndex + 1]) {
+						currentIndex++;
+						transcriptEl.innerHTML = words[currentIndex - 1]; // update transcript
+						var prevWordEl = transcriptEl.querySelector('.highlight');
+						if (prevWordEl) {
+							prevWordEl.classList.remove('highlight'); // remove previous highlight
 						}
-						transcript.innerHTML = cues.map((cue, index) => {
-							const className = index === i ? 'highlight' : '';
-							return `<span class="${className}">${cue.text}</span>`;
-						}).join(' ');
-					});
+						var currentWordEl = transcriptEl.querySelector(`:nth-child(${currentIndex})`);
+						currentWordEl.classList.add('highlight'); // highlight current word
+					}
 				});
-				wavesurfer.load('audio/Interview_002.m4a');
 			});
 	</script>
 </body>
