@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="UTF-8">
+	<meta charset="utf-8">
 	<title>Interview</title>
-	<link rel="stylesheet" href="https://cdn.plyr.io/3.6.4/plyr.css" />
+	<link rel="stylesheet" href="https://unpkg.com/wavesurfer.js/dist/wavesurfer.min.css">
+	<script src="https://unpkg.com/wavesurfer.js/dist/wavesurfer.min.js"></script>
 	<style>
 		body {
-			font-family: Arial, sans-serif;
 			margin: 0;
 			padding: 0;
 		}
@@ -17,82 +17,72 @@
 		}
 		h1 {
 			text-align: center;
-			margin-top: 50px;
-			margin-bottom: 20px;
-		}
-		audio {
-			display: block;
-			margin: 0 auto;
-			margin-bottom: 20px;
+			margin-top: 0;
 		}
 		.transcript {
 			font-size: 18px;
 			line-height: 1.5;
-			margin-bottom: 50px;
-			white-space: pre-line;
-			overflow-x: hidden;
-			overflow-y: scroll;
-			height: 400px;
-			padding-right: 20px;
+			margin-top: 50px;
 		}
-		.transcript p {
-			margin: 0;
-			padding: 0;
-		}
-		.current-line {
-			background-color: #f7e9b8;
-		}
-		@media (max-width: 768px) {
-			.transcript {
-				font-size: 16px;
-				height: auto;
-			}
+		.highlight {
+			background-color: yellow;
+			font-weight: bold;
 		}
 	</style>
 </head>
 <body>
 	<div class="container">
-		<h1>Interview Cordula Bitter</h1>
-		<audio controls crossorigin>
-			<source src="audio/Interview_002.m4a" type="audio/mp4">
-			Your browser does not support the audio element.
-		</audio>
+		<h1>Interview</h1>
+		<div id="waveform"></div>
 		<div class="transcript">
-			<?php
-				$transcript_file = fopen("transcript/Interview_002.m4a_large.tsv", "r") or die("Unable to open transcript file!");
-				$headers = fgetcsv($transcript_file, 0, "\t");
-				while (($line = fgetcsv($transcript_file, 0, "\t")) !== false) {
-					echo "<p";
-					if (isset($_GET['time']) && $line[0] <= $_GET['time'] && $line[1] > $_GET['time']) {
-						echo " class=\"current-line\"";
-					}
-					echo ">" . $line[2] . "</p>";
-				}
-				fclose($transcript_file);
-			?>
+			<p></p>
 		</div>
 	</div>
-	<script src="https://cdn.plyr.io/3.6.4/plyr.js"></script>
+
 	<script>
-		const player = new Plyr('audio');
-		player.on('timeupdate', event => {
-			const time = event.detail.plyr.currentTime;
-			window.history.replaceState({}, '', `?time=${time}`);
-			const currentLine = document.querySelector('.current-line');
-			if (currentLine) {
-				currentLine.classList.remove('current-line');
-			}
-			const allLines = document.querySelectorAll('.transcript p');
-			for (const line of allLines) {
-				const start = parseFloat(line.dataset.start);
-				const end = parseFloat(line.dataset.end);
-				if (start <= time && end > time) {
-					line.classList.add('current-line');
-					line.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-					break;
-				}
-			}
+		const wavesurfer = WaveSurfer.create({
+			container: '#waveform',
+			waveColor: 'gray',
+			progressColor: 'black',
+			cursorColor: 'black',
+			barWidth: 3,
+			responsive: true,
+			height: 100,
+			normalize: true,
+			minimap: true,
+			backend: 'MediaElement',
+			mediaControls: true
 		});
-    </script>
+
+		const transcript = document.querySelector('.transcript p');
+
+		fetch('transcript/Interview_002.m4a_large.tsv')
+			.then(response => response.text())
+			.then(data => {
+				const lines = data.split('\n').slice(1);
+				const cues = lines.map(line => {
+					const [start, end, text] = line.split('\t');
+					return {
+						start: parseFloat(start),
+						end: parseFloat(end),
+						text: text.trim()
+					};
+				});
+				wavesurfer.on('ready', function() {
+					const duration = wavesurfer.getDuration();
+					let i = 0;
+					wavesurfer.on('seek', function(progress) {
+						while (i < cues.length - 1 && progress > cues[i + 1].start) {
+							i++;
+						}
+						transcript.innerHTML = cues.map((cue, index) => {
+							const className = index === i ? 'highlight' : '';
+							return `<span class="${className}">${cue.text}</span>`;
+						}).join(' ');
+					});
+				});
+				wavesurfer.load('audio/Interview_002.m4a');
+			});
+	</script>
 </body>
 </html>
