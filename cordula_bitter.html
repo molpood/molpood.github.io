@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Interview 002</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			padding: 0;
+			margin: 0;
+		}
+
+		header {
+			background-color: #1E90FF;
+			color: white;
+			padding: 20px;
+			text-align: center;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 2em;
+		}
+
+		main {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			height: 100vh;
+		}
+
+		audio {
+			margin: 20px 0;
+			width: 90%;
+			max-width: 600px;
+		}
+
+		table {
+			border-collapse: collapse;
+			width: 90%;
+			max-width: 600px;
+		}
+
+		th, td {
+			padding: 10px;
+			border: 1px solid #ddd;
+			text-align: left;
+		}
+
+		th {
+			background-color: #f2f2f2;
+		}
+
+		tr:hover {
+			background-color: #f5f5f5;
+		}
+
+		.highlight {
+			background-color: #FFD700;
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Interview 002</h1>
+	</header>
+	<main>
+		<audio src="audio/Interview_002.m4a" controls></audio>
+		<table>
+			<thead>
+				<tr>
+					<th>Startzeit</th>
+					<th>Endzeit</th>
+					<th>Text</th>
+				</tr>
+			</thead>
+			<tbody id="transcript">
+			</tbody>
+		</table>
+	</main>
+	<script>
+		const audio = document.querySelector('#audio');
+		const transcriptTable = document.querySelector('#transcript-table');
+		const transcriptRows = transcriptTable.querySelectorAll('tr');
+		const transcriptData = [];
+
+		fetch('transcript/Interview_002.m4a_large.tsv')
+			.then(response => response.text())
+			.then(text => {
+				const rows = text.split('\n');
+				const headers = rows[0].split('\t');
+
+				for (let i = 1; i < rows.length; i++) {
+					const values = rows[i].split('\t');
+					if (values.length === headers.length) {
+						const row = { text: values[2] };
+						transcriptData.push(row);
+					}
+				}
+
+				transcriptRows.forEach(row => {
+					row.addEventListener('click', () => {
+						audio.currentTime = parseFloat(row.dataset.start);
+						audio.play();
+					});
+				});
+
+				audio.addEventListener('timeupdate', () => {
+					const currentTime = audio.currentTime;
+					const activeRow = transcriptData.find((row, index) => {
+						return currentTime >= parseFloat(transcriptRows[index].dataset.start) &&
+							   currentTime <= parseFloat(transcriptRows[index].dataset.end);
+					});
+
+					if (activeRow) {
+						transcriptRows.forEach(row => row.classList.remove('active'));
+						const activeRowElement = transcriptTable.querySelector(`tr:nth-child(${transcriptData.indexOf(activeRow) + 1})`);
+						activeRowElement.classList.add('active');
+					}
+				});
+			})
+			.catch(error => console.log(error));
+	</script>
+</body>
+</html>
