@@ -2,91 +2,101 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Interview</title>
-	<!-- CSS -->
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+	<title>Audio Player</title>
 	<style>
-		.transcript {
-			font-size: 1.2rem;
-			margin-top: 2rem;
+		/* CSS für den Audio Player */
+		.audio-player {
+			margin: 10px;
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
 		}
-		.highlight {
-			background-color: yellow;
-			font-weight: bold;
+
+		.audio-player audio {
+			margin-right: 10px;
+			flex-grow: 1;
+			width: 100%;
+			max-width: 400px;
+		}
+
+		.audio-player p {
+			margin: 0;
+			padding: 0;
+			line-height: 1.5;
+			font-size: 18px;
+		}
+
+		.audio-player p.current {
+			background-color: #FFFFCC;
+		}
+
+		@media (max-width: 768px) {
+			/* CSS für den Audio Player auf Smartphones */
+			.audio-player audio {
+				margin-right: 0;
+				margin-bottom: 10px;
+				max-width: none;
+			}
 		}
 	</style>
 </head>
 <body>
-	<div class="container mt-5">
-		<!-- Audio Player -->
-		<div class="row">
-			<div class="col-md-8 offset-md-2">
-				<div id="player"></div>
-			</div>
-		</div>
-		<!-- Transcript -->
-		<div class="row">
-			<div class="col-md-8 offset-md-2 transcript">
-				<p id="transcript"></p>
-			</div>
+	<div class="audio-player">
+		<audio controls id="audio-player">
+			<source src="audio/Interview_002.m4a" type="audio/mp4">
+		</audio>
+		<div id="transcript">
+			<!-- JavaScript fügt den Text des Transkripts hier ein -->
 		</div>
 	</div>
 
-	<!-- JavaScript -->
-    <script src="https://unpkg.com/wavesurfer.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.0/howler.min.js"></script>
 	<script>
-		// Audio Player
-		var sound = new Howl({
-			src: ['audio/Interview_002.m4a'],
-			html5: true
-		});
-		var player = WaveSurfer.create({
-			container: '#player',
-			waveColor: 'gray',
-			progressColor: 'black',
-			cursorColor: 'black',
-			barWidth: 2,
-			barHeight: 4,
-			barGap: 1
-		});
-		player.load('audio/Interview_002.m4a');
-		player.on('ready', function () {
-			player.play();
-		});
-		player.on('play', function () {
-			sound.play();
-		});
-		player.on('pause', function () {
-			sound.pause();
-		});
-		sound.on('end', function () {
-			player.pause();
-			player.seekTo(0);
-		});
+		// JavaScript um das Transkript anzuzeigen und die entsprechende Stelle hervorzuheben
+		const transcriptDiv = document.getElementById('transcript');
+		const audioPlayer = document.getElementById('audio-player');
 
-		// Transcript
-		var transcriptEl = document.getElementById('transcript');
 		fetch('transcript/Interview_002.m4a_large.tsv')
 			.then(response => response.text())
 			.then(data => {
-				var rows = data.trim().split('\n').slice(1); // remove header
-				var words = rows.map(row => row.split('\t')[2]); // get text column
-				var times = rows.map(row => parseFloat(row.split('\t')[0])); // get start times
-				var currentIndex = 0;
-				player.on('audioprocess', function () {
-					if (player.getCurrentTime() > times[currentIndex + 1]) {
-						currentIndex++;
-						transcriptEl.innerHTML = words[currentIndex - 1]; // update transcript
-						var prevWordEl = transcriptEl.querySelector('.highlight');
-						if (prevWordEl) {
-							prevWordEl.classList.remove('highlight'); // remove previous highlight
+				const lines = data.split('\n').slice(1); // erste Zeile (header) ignorieren
+				let currentIndex = 0;
+
+				lines.forEach((line, index) => {
+					const [start, end, text] = line.split('\t');
+					const p = document.createElement('p');
+					p.textContent = text;
+					transcriptDiv.appendChild(p);
+
+					audioPlayer.addEventListener('timeupdate', () => {
+						const currentTime = audioPlayer.currentTime;
+						if (currentTime >= start && currentTime < end) {
+							p.classList.add('current');
+							currentIndex = index;
+						} else {
+							p.classList.remove('current');
 						}
-						var currentWordEl = transcriptEl.querySelector(`:nth-child(${currentIndex})`);
-						currentWordEl.classList.add('highlight'); // highlight current word
-					}
+					});
+
+					p.addEventListener('click', () => {
+						audioPlayer.currentTime = start;
+						audioPlayer.play();
+						currentIndex = index;
+					});
 				});
+
+				// Scrollen Sie zur aktuellen Stelle im Text, wenn der Benutzer das Scrollen nicht manuell geändert hat
+				let userScrolling = false;
+				transcriptDiv.addEventListener('scroll', () => {
+					userScrolling = true;
+				});
+
+				setInterval(() => {
+					if (!userScrolling) {
+						const currentP = transcriptDiv.children[currentIndex];
+						const offset = currentP.offsetTop - transcriptDiv.offsetTop - 20; // 20px padding
+						transcriptDiv.scrollTop = offset;
+					}
+				}, 100);
 			});
 	</script>
 </body>
